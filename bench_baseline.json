@@ -1,0 +1,26 @@
+{
+  "generated": "2026-05-22T12:41:28.421861+05:30",
+  "runs_per_scene": 1,
+  "results": [
+    {
+      "scene": "small",
+      "style": "crisp",
+      "wall_time_ms": 45127,
+      "frames": 261,
+      "fps": 5.783615573976841,
+      "alloc_bytes": 63276664312,
+      "num_allocs": 2167368319,
+      "peak_rss_bytes": 711688192
+    },
+    {
+      "scene": "small",
+      "style": "sketchy",
+      "wall_time_ms": 50638,
+      "frames": 261,
+      "fps": 5.154212295748669,
+      "alloc_bytes": 66911463808,
+      "num_allocs": 2190937580,
+      "peak_rss_bytes": 711688192
+    }
+  ]
+}

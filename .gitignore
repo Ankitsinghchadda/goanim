@@ -1,0 +1,53 @@
+# --- Out-of-scope assets / generated artifacts --------------------------
+audio/
+binary/
+videos-example/
+
+# --- Secrets --------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Generated media (anywhere) ------------------------------------------
+*.mp4
+*.wav
+*.mp3
+*.m4a
+# Showcase media that ships with the repo:
+!docs/media/*.mp4
+!docs/media/*.png
+!docs/media/*.gif
+
+# --- Profiling / bench output --------------------------------------------
+*.prof
+*.pprof
+*.test
+bench_*.json
+!bench_baseline.json
+
+# --- Go / editor / OS noise ----------------------------------------------
+*.exe
+*.out
+.DS_Store
+.idea/
+.vscode/
+vendor/
+coverage.out
+coverage.html
+
+# --- Stray Go binaries at the repo root ----------------------------------
+# `go build ./examples/<name>` drops a binary named <name> in the current
+# directory. Match every example + showcase + cmd by name so nobody
+# accidentally commits one.
+/showcase
+/01_*
+/02_*
+/03_*
+/04_*
+/05_*
+/06_*
+/07_*
+/08_*
+/09_*
+/bench
+/goanim

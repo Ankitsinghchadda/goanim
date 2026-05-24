@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+
+  settings:
+    revive:
+      rules:
+        # Keep revive enabled for the bug-catching rules, but skip
+        # the "every exported symbol needs a doc comment" check. Many
+        # exported methods here are interface implementations
+        # (Bounds, Style, Render, Reveal, ...) where the documentation
+        # lives on the interface, not on every concrete satisfier.
+        - name: exported
+          disabled: true
+    misspell:
+      locale: US
+    staticcheck:
+      # QF* are quick-fix style suggestions, not bug detectors. Skip
+      # them — we don't enforce "expand math.Pow" / "omit embedded
+      # field" / "apply De Morgan's law" stylistic rewrites.
+      checks:
+        - all
+        - -QF*
+
+  exclusions:
+    rules:
+      # Examples and bench tooling are demonstrations; don't enforce
+      # production-grade errcheck on `defer Close()` in main()s.
+      - path: examples/
+        linters:
+          - errcheck
+      - path: cmd/
+        linters:
+          - errcheck
+      - path: _test\.go
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
