@@ -124,8 +124,8 @@ func TestClusterGlyphsDisjoint(t *testing.T) {
 // stem (the "i" pattern) should merge.
 func TestClusterGlyphsAccent(t *testing.T) {
 	p := geometry.NewPath()
-	boxPath(p, 4, 0, 6, 6)     // stem
-	boxPath(p, 4, 8, 6, 9.5)   // dot, small gap above stem
+	boxPath(p, 4, 0, 6, 6)   // stem
+	boxPath(p, 4, 8, 6, 9.5) // dot, small gap above stem
 	got := ClusterGlyphs(p)
 	if len(got) != 1 {
 		t.Errorf("accent: expected 1 cluster, got %d", len(got))
