@@ -26,6 +26,7 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -63,9 +64,123 @@ func Compile(source string, heightPx float64) (*geometry.Path, error) {
 	return scaleAndCenter(gp, heightPx), nil
 }
 
+// ClusterGlyphs groups the subpaths of p (split at MoveTo) into
+// visual glyph clusters using bounding-box geometry. Each returned
+// path approximates one visual glyph: closed counters (the inside of
+// "O", "a", "e", "p"), accents (the dot on "i"/"j", umlauts) are
+// merged with their bodies; horizontally disjoint letters and stacked
+// operator parts of comparable size (e.g. the two bars of "=") stay
+// separate.
+//
+// Heuristics applied per pair (existing-cluster bbox, new subpath bbox):
+//
+//  1. Containment — one bbox lies wholly inside the other (closed
+//     counters always nest this way).
+//  2. Accent above/below — strong horizontal overlap, the smaller piece
+//     is no wider than the larger (rules out wide fraction bars over a
+//     narrower numerator), the smaller piece is much shorter than the
+//     larger (rules out same-size stacks like "="), and the vertical
+//     gap is small relative to the taller piece.
+//
+// This is a geometric approximation, not real glyph awareness; it will
+// over- or under-merge in edge cases (notably equals/divide stay split,
+// and large fraction layouts may split per row). Original draw order
+// is preserved — clusters appear in the order their first subpath was
+// added.
+func ClusterGlyphs(p *geometry.Path) []*geometry.Path {
+	raw := SubPaths(p)
+	if len(raw) <= 1 {
+		return raw
+	}
+	type cluster struct {
+		parts []*geometry.Path
+		bbox  geometry.Rect
+	}
+	var clusters []*cluster
+	for _, sp := range raw {
+		b := sp.Bounds()
+		if b.Empty() {
+			continue
+		}
+		merged := false
+		for _, c := range clusters {
+			if shouldMergeGlyph(b, c.bbox) {
+				c.parts = append(c.parts, sp)
+				c.bbox = c.bbox.Union(b)
+				merged = true
+				break
+			}
+		}
+		if !merged {
+			clusters = append(clusters, &cluster{
+				parts: []*geometry.Path{sp},
+				bbox:  b,
+			})
+		}
+	}
+	out := make([]*geometry.Path, 0, len(clusters))
+	for _, c := range clusters {
+		gp := geometry.NewPath()
+		for _, part := range c.parts {
+			gp.Append(part)
+		}
+		out = append(out, gp)
+	}
+	return out
+}
+
+// shouldMergeGlyph reports whether a subpath with bbox b should be
+// merged into an existing cluster with bbox a.
+func shouldMergeGlyph(a, b geometry.Rect) bool {
+	if a.Empty() || b.Empty() {
+		return false
+	}
+	// Rule 1: full containment — closed counters (inside of "O", "a"…).
+	if rectContains(a, b) || rectContains(b, a) {
+		return true
+	}
+	aw, ah := a.Width(), a.Height()
+	bw, bh := b.Width(), b.Height()
+	if aw <= 0 || bw <= 0 || ah <= 0 || bh <= 0 {
+		return false
+	}
+	xOverlap := math.Max(0, math.Min(a.Max.X, b.Max.X)-math.Max(a.Min.X, b.Min.X))
+	minW := math.Min(aw, bw)
+	if xOverlap/minW < 0.7 {
+		return false
+	}
+	// Identify the shorter piece (the candidate accent).
+	var smallW, smallH, largeW, largeH float64
+	if ah <= bh {
+		smallW, smallH, largeW, largeH = aw, ah, bw, bh
+	} else {
+		smallW, smallH, largeW, largeH = bw, bh, aw, ah
+	}
+	// An accent isn't wider than its body — this is what separates an
+	// "i" dot (narrow on narrow stem) from a fraction bar (wide over a
+	// narrower numerator).
+	if smallW > 1.1*largeW {
+		return false
+	}
+	// Same-size stacks (e.g. the two bars of "=") shouldn't fuse —
+	// require the accent to be visibly smaller than the body.
+	if smallH > 0.4*largeH {
+		return false
+	}
+	// Vertical gap must be small relative to the body height.
+	yGap := math.Max(0, math.Max(a.Min.Y, b.Min.Y)-math.Min(a.Max.Y, b.Max.Y))
+	return yGap < 0.5*largeH
+}
+
+func rectContains(outer, inner geometry.Rect) bool {
+	return outer.Min.X <= inner.Min.X && outer.Min.Y <= inner.Min.Y &&
+		outer.Max.X >= inner.Max.X && outer.Max.Y >= inner.Max.Y
+}
+
 // SubPaths splits a composite path at MoveTo boundaries — each
-// subpath roughly corresponds to one glyph in the formula. Used by
-// mathx.Equation to provide per-symbol animation hooks.
+// subpath roughly corresponds to one stroke/contour, not necessarily
+// one visual glyph (an "O" yields two subpaths: outer outline and
+// counter). For per-glyph grouping use ClusterGlyphs.
 func SubPaths(p *geometry.Path) []*geometry.Path {
 	var out []*geometry.Path
 	var cur *geometry.Path

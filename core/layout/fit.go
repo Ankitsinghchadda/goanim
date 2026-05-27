@@ -44,8 +44,14 @@ const (
 // DefaultSafeWidth is the safe-width target when WithSafeWidth isn't
 // called. Sized to match the standard 1920px canvas minus 5%
 // horizontal safe area on each side. Layouts using a different
-// canvas should set this explicitly.
-const DefaultSafeWidth = 1920.0 * 0.9
+// canvas should set this explicitly, or call SetDefaultSafeArea once
+// at program start for the active scene dimensions.
+var DefaultSafeWidth = 1920.0 * 0.9
+
+// DefaultSafeHeight is the safe-height target — 1080px canvas minus
+// 11% vertical safe area top and bottom. Pair with DefaultSafeWidth
+// via SetDefaultSafeArea for non-16:9 canvases (e.g. 1080x1920 Shorts).
+var DefaultSafeHeight = 1080.0 * 0.78
 
 // Default min/max scale caps. These prevent Fit from producing
 // extreme sizes — a 30-icon row capped at 0.5× scale is still
@@ -55,8 +61,18 @@ const DefaultSafeWidth = 1920.0 * 0.9
 // DefaultSafeMax via its own clamp because it's about preventing
 // overflow, not filling.
 const (
-	DefaultSafeMin    = 0.5
-	DefaultSafeMax    = 1.6
-	DefaultFillMaxUp  = 2.5 // FitContent / FitFill upper bound.
-	DefaultSafeHeight = 1080.0 * 0.78
+	DefaultSafeMin   = 0.5
+	DefaultSafeMax   = 1.6
+	DefaultFillMaxUp = 2.5 // FitContent / FitFill upper bound.
 )
+
+// SetDefaultSafeArea overrides DefaultSafeWidth/DefaultSafeHeight to
+// match the active scene dimensions. Call once at program start with
+// the scene's pixel width and height; the 10% horizontal / 22% vertical
+// safe margins are applied. Use this for vertical (9:16) or other
+// non-default canvases so Fit layouts target the right safe area
+// without overriding WithSafeWidth on every container.
+func SetDefaultSafeArea(sceneW, sceneH int) {
+	DefaultSafeWidth = float64(sceneW) * 0.9
+	DefaultSafeHeight = float64(sceneH) * 0.78
+}

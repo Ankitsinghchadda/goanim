@@ -64,7 +64,7 @@ func (e *Equation) compile() {
 		return
 	}
 	e.full = path
-	e.subPaths = latex.SubPaths(path)
+	e.subPaths = latex.ClusterGlyphs(path)
 }
 
 // WithHeight sets the equation's pixel height and recompiles.
@@ -83,8 +83,10 @@ func (e *Equation) WithStyle(s style.Style) *Equation { e.style = s; return e }
 // Source returns the original LaTeX string.
 func (e *Equation) Source() string { return e.source }
 
-// Submobjects returns one path per glyph (approximately). Used by
-// Write and TransformEquation animations.
+// Submobjects returns one path per visual glyph (approximately).
+// Subpaths are clustered by bounding-box geometry so closed counters
+// and accents stay merged with their letter body. Used by Write and
+// TransformEquation animations.
 func (e *Equation) Submobjects() []*geometry.Path { return e.subPaths }
 
 // Symbol returns the i-th glyph as a path. Returns nil if i is OOB.
